@@ -3,7 +3,7 @@
 # import rospy
 import scipy.io as sio
 import numpy as np
-from gym import Wrapper
+from gymnasium import Wrapper
 
 from ttenv.metadata import METADATA
 

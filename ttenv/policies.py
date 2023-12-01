@@ -25,7 +25,7 @@ class SinePolicy():
         p_b = - np.matmul(R.T, self.init_org) + np.matmul(R.T, odom[:2])
         p_b_tp1 = [p_b[0] + self.x_interval, self.b * np.sin(self.a * (p_b[0] + self.x_interval))]
         p_g_tp1 = self.init_org + np.matmul(R, p_b_tp1)
-        th_b_tp1 = np.arctan(self.b * self.a * np.cos( p_b_tp1[0] * self.a ))
+        th_b_tp1 = np.arctan(self.b * self.a * np.cos(p_b_tp1[0] * self.a))
         th_g_tp1 = util.wrap_around(th_b_tp1 + self.th)
 
         ang_vel = util.wrap_around(th_g_tp1 - odom[2]) / self.sampling_period
@@ -34,6 +34,9 @@ class SinePolicy():
         return np.clip(np.array([lin_vel, ang_vel]), self.limit[0], self.limit[1])
 
     def collision(self, odom):
+        """
+        如果发生了碰撞，则改变运动方向
+        """
         self.init_org = odom[:2]
         self.th = util.wrap_around(odom[2] + np.random.random()*np.pi/2 - np.pi/4)
 
@@ -58,13 +61,40 @@ class CirclePolicy():
         w = util.wrap_around(np.arctan2(y - odom[1], x - odom[0]) - odom[2])/self.sampling_period
         return np.clip(np.array([v,w]), self.limit[0], self.limit[1])
 
-    def collision(self):
-        self.d_th = -self.d_th
+    def collision(self, new_state):
+        self.d_th = -self.d_th + np.random.random()*np.pi/4
 
-    def reset(self):
+    def reset(self, init_state):
         self.d_th = np.random.random()*np.pi
 
 class ConstantPolicy():
+    def __init__(self, noise_cov, lim_vel=2.0):
+        self.noise_cov = noise_cov
+        self.limit = np.array([[-lim_vel, -np.pi/5], [lim_vel, np.pi/5]])
+        self.v = 0
+        self.w = 0
+
+    def get_control(self, state):
+        if len(state) != 5:  # 不对v、w进行观测和估计
+            [self.v, self.w] = np.random.multivariate_normal([0, 0], self.noise_cov)
+            return np.clip([self.v, self.w], self.limit[0], self.limit[1])
+        else:
+            uv = np.random.multivariate_normal(state[-2:], self.noise_cov)
+            return np.clip(uv, self.limit[0], self.limit[1])
+
+    def collision(self, state):
+        if len(state) != 5:  # 不对v、w进行观测和估计
+            return np.array([self.v, -self.w])
+        else:
+            return np.array([state[-2], -state[-1]])
+
+
+    def reset(self, init_state):
+        self.v = 0
+        self.w = 0
+
+
+class RandomWalkPolicy():
     def __init__(self, noise_cov, lim_vel=2.0):
         self.noise_cov = noise_cov
         self.limit = np.array([[-lim_vel, -np.pi/5], [lim_vel, np.pi/5]])
@@ -75,7 +105,6 @@ class ConstantPolicy():
 
     def collision(self, state):
         return np.array([state[-2], -state[-1]])
-
 
     def reset(self, init_state):
         pass

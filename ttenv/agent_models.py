@@ -16,6 +16,7 @@ import numpy as np
 from ttenv.metadata import METADATA
 import ttenv.util as util
 
+
 class Agent(object):
     def __init__(self, dim, sampling_period, limit, collision_func, margin=METADATA['margin']):
         self.dim = dim
@@ -31,14 +32,15 @@ class Agent(object):
         return self.collision_func(pos[:2])
 
     def margin_check(self, pos, target_pos):
-        return any(np.sqrt(np.sum((pos - target_pos)**2, axis=1)) < self.margin) # no update
+        return any(np.sqrt(np.sum((pos - target_pos) ** 2, axis=1)) < self.margin)  # no update
 
     def reset(self, init_state):
         self.state = init_state
 
+
 class AgentDoubleInt2D(Agent):
     def __init__(self, dim, sampling_period, limit, collision_func,
-                    margin=METADATA['margin'], A=None, W=None):
+                 margin=METADATA['margin'], A=None, W=None):
         Agent.__init__(self, dim, sampling_period, limit, collision_func, margin=margin)
         self.A = np.eye(self.dim) if A is None else A
         self.W = W
@@ -46,7 +48,7 @@ class AgentDoubleInt2D(Agent):
     def update(self, margin_pos=None):
         new_state = np.matmul(self.A, self.state[:self.dim])
         if self.W is not None:
-            noise_sample = np.random.multivariate_normal(np.zeros(self.dim,), self.W)
+            noise_sample = np.random.multivariate_normal(np.zeros(self.dim, ), self.W)
             new_state += noise_sample
 
         is_col = 0
@@ -58,17 +60,18 @@ class AgentDoubleInt2D(Agent):
         self.range_check()
         return is_col
 
+
 class AgentDoubleInt2D_Nonlinear(AgentDoubleInt2D):
     def __init__(self, dim, sampling_period, limit, collision_func,
-                    margin=METADATA['margin'], A=None, W=None, obs_check_func=None):
+                 margin=METADATA['margin'], A=None, W=None, obs_check_func=None):
         AgentDoubleInt2D.__init__(self, dim, sampling_period, limit,
-            collision_func, margin=margin, A=A, W=W)
+                                  collision_func, margin=margin, A=A, W=W)
         self.obs_check_func = obs_check_func
 
     def update(self, margin_pos=None):
         new_state = np.matmul(self.A, self.state[:self.dim])
         if self.W is not None:
-            noise_sample = np.random.multivariate_normal(np.zeros(self.dim,), self.W)
+            noise_sample = np.random.multivariate_normal(np.zeros(self.dim, ), self.W)
             new_state += noise_sample
 
         is_col = 0
@@ -78,7 +81,7 @@ class AgentDoubleInt2D_Nonlinear(AgentDoubleInt2D):
 
         if self.obs_check_func is not None:
             del_vx, del_vy = self.obstacle_detour_maneuver(
-                    r_margin=METADATA['target_speed_limit']*self.sampling_period*2)
+                r_margin=METADATA['target_speed_limit'] * self.sampling_period * 2)
             new_state[2] += del_vx
             new_state[3] += del_vy
 
@@ -93,13 +96,15 @@ class AgentDoubleInt2D_Nonlinear(AgentDoubleInt2D):
         are clipped proportional to the original values.
         """
         self.state[:2] = np.clip(self.state[:2], self.limit[0][:2], self.limit[1][:2])
-        v_square = self.state[2:]**2
-        del_v = np.sum(v_square) - self.limit[1][2]**2
+        v_square = self.state[2:] ** 2
+        del_v = np.sum(v_square) - self.limit[1][2] ** 2
         if del_v > 0.0:
             self.state[2] = np.sign(self.state[2]) * np.sqrt(max(0.0,
-                v_square[0] - del_v * v_square[0] / (v_square[0] + v_square[1])))
+                                                                 v_square[0] - del_v * v_square[0] / (
+                                                                         v_square[0] + v_square[1])))
             self.state[3] = np.sign(self.state[3]) * np.sqrt(max(0.0,
-                v_square[1] - del_v * v_square[1] / (v_square[0] + v_square[1])))
+                                                                 v_square[1] - del_v * v_square[1] / (
+                                                                         v_square[0] + v_square[1])))
 
     def collision_control(self):
         """
@@ -108,11 +113,11 @@ class AgentDoubleInt2D_Nonlinear(AgentDoubleInt2D):
         """
         odom = [self.state[0], self.state[1], np.arctan2(self.state[3], self.state[2])]
         obs_pos = self.obs_check_func(odom)
-        v = np.sqrt(np.sum(np.square(self.state[2:]))) + np.random.normal(0.0,1.0)
+        v = np.sqrt(np.sum(np.square(self.state[2:]))) + np.random.normal(0.0, 1.0)
         if obs_pos[1] >= 0:
-            th = obs_pos[1] - (1 + np.random.random()) * np.pi/2
+            th = obs_pos[1] - (1 + np.random.random()) * np.pi / 2
         else:
-            th = obs_pos[1] + (1 + np.random.random()) * np.pi/2
+            th = obs_pos[1] + (1 + np.random.random()) * np.pi / 2
 
         state = np.array([self.state[0], self.state[1], v * np.cos(th + odom[2]), v * np.sin(th + odom[2])])
         return state
@@ -130,8 +135,8 @@ class AgentDoubleInt2D_Nonlinear(AgentDoubleInt2D):
         """
         odom = [self.state[0], self.state[1], np.arctan2(self.state[3], self.state[2])]
         obs_pos = self.obs_check_func(odom)
-        speed = np.sqrt(np.sum(self.state[2:]**2))
-        rot_ang = np.pi/2 * (1. + 1./(1. + np.exp(-(speed-0.5*METADATA['target_speed_limit']))))
+        speed = np.sqrt(np.sum(self.state[2:] ** 2))
+        rot_ang = np.pi / 2 * (1. + 1. / (1. + np.exp(-(speed - 0.5 * METADATA['target_speed_limit']))))
         if obs_pos is not None:
             acc = max(0.0, speed * np.cos(obs_pos[1])) / max(METADATA['margin2wall'], obs_pos[0] - r_margin)
             th = obs_pos[1] - rot_ang if obs_pos[1] >= 0 else obs_pos[1] + rot_ang
@@ -141,9 +146,10 @@ class AgentDoubleInt2D_Nonlinear(AgentDoubleInt2D):
         else:
             return 0., 0.
 
+
 class AgentSE2(Agent):
     def __init__(self, dim, sampling_period, limit, collision_func,
-                                        margin=METADATA['margin'], policy=None):
+                 margin=METADATA['margin'], policy=None):
         Agent.__init__(self, dim, sampling_period, limit, collision_func, margin=margin)
         self.policy = policy
 
@@ -169,23 +175,28 @@ class AgentSE2(Agent):
         is_col = 0
         if self.collision_check(new_state[:2]):
             is_col = 1
-            new_state[:2] = self.state[:2]
-            control_input = self.vw
-            if self.policy is not None:
+            new_state[:2] = self.state[:2]  # 暂不执行坐标更新
+            # control_input = self.vw  # 执行上一次的命令？
+            if self.policy is not None:  # 对于target进行策略调整
                 corrected_policy = self.policy.collision(new_state)
+                control_input = corrected_policy
                 if corrected_policy is not None:
-                    new_state = SE2DynamicsVel(self.state,
-                                        self.sampling_period, corrected_policy)
-        elif margin_pos is not None:
-            if self.margin_check(new_state[:2], margin_pos):
-                new_state[:2] = self.state[:2]
-                control_input = self.vw
-                
+                    if self.dim == 3:
+                        new_state = SE2Dynamics(self.state, self.sampling_period, corrected_policy)
+                    elif self.dim == 5:
+                        new_state = SE2DynamicsVel(self.state, self.sampling_period, corrected_policy)
+
+        elif margin_pos is not None:  # 对于agent进行最小距离检测
+            if self.margin_check(new_state[:2], margin_pos):  # 如果小于最小距离
+                new_state[:2] = self.state[:2]  # 暂不执行坐标更新
+                # control_input = self.vw
+
         self.state = new_state
         self.vw = control_input
         self.range_check()
 
         return is_col
+
 
 class Agent2DFixedPath(Agent):
     """
@@ -194,6 +205,7 @@ class Agent2DFixedPath(Agent):
     number of time steps in a trajectory (or per episode). Each row consists
     of (x, y, xdot, ydot).
     """
+
     def __init__(self, dim, sampling_period, limit, collision_func, path, margin=METADATA['margin']):
         Agent.__init__(self, dim, sampling_period, limit, collision_func, margin=margin)
         self.path = path
@@ -208,32 +220,62 @@ class Agent2DFixedPath(Agent):
         self.t = 0
         self.state = init_state
 
+
 def SE2Dynamics(x, dt, u):
     """
     update dynamics function with a control input -- linear, angular velocities
     """
-    assert(len(x)==3)
-    tw = dt * u[1]
+    assert (len(x) == 3)
+    tw = dt * u[1]  # tau * w
 
     # Update the agent state
     if abs(tw) < 0.001:
-        diff = np.array([dt*u[0]*np.cos(x[2]+tw/2),
-                dt*u[0]*np.sin(x[2]+tw/2),
-                tw])
+        diff = np.array([dt * u[0] * np.cos(x[2] + tw / 2),
+                         dt * u[0] * np.sin(x[2] + tw / 2),
+                         tw])
     else:
-        diff = np.array([u[0]/u[1]*(np.sin(x[2]+tw) - np.sin(x[2])),
-                u[0]/u[1]*(np.cos(x[2]) - np.cos(x[2]+tw)),
-                tw])
+        diff = np.array([u[0] / u[1] * (np.sin(x[2] + tw) - np.sin(x[2])),
+                         u[0] / u[1] * (np.cos(x[2]) - np.cos(x[2] + tw)),
+                         tw])
     new_x = x + diff
     new_x[2] = util.wrap_around(new_x[2])
     return new_x
 
+
 def SE2DynamicsVel(x, dt, u=None):
     """
-    update dynamics function for contant linear and angular velocities
+    update dynamics function for constant linear and angular velocities
     """
-    assert(len(x)==5) # x = [x,y,theta,v,w]
+    assert (len(x) == 5)  # x = [x,y,theta,v,w]
     if u is None:
         u = x[-2:]
     odom = SE2Dynamics(x[:3], dt, u)
     return np.concatenate((odom, u))
+
+
+def SE2Dynamics_AUV(x, dt, u):
+    """
+    update dynamics function with a control input -- linear, angular velocities
+    """
+    assert (len(x) == 3)
+    tw = dt * u[1]  # tau * w
+
+    # Update the agent state
+    diff = np.array([dt * u[0] * np.cos(x[2] + tw / 2),
+                     dt * u[0] * np.sin(x[2] + tw / 2),
+                     tw])
+    new_x = x + diff
+    new_x[2] = util.wrap_around(new_x[2])
+    return new_x
+
+
+if __name__ == "__main__":
+    # MAP = map_utils.GridMap(
+    #     map_path=os.path.join(map_dir_path, map_name),
+    #     margin2wall=METADATA['margin2wall'])
+    # agent = AgentSE2(3, 0.5,
+    #                          [np.concatenate((self.MAP.mapmin, [-np.pi])), np.concatenate((self.MAP.mapmax, [np.pi]))],
+    #                          lambda x: self.MAP.is_collision(x),
+    #                          policy=SinePolicy(0.1, 0.5, 5.0, self.sampling_period)
+    #                          )
+    print('hello world')

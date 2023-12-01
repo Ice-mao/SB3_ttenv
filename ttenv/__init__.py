@@ -1,8 +1,9 @@
-from gym import wrappers
+from gymnasium import wrappers
 from ttenv import target_tracking, target_imtracking
 
+
 def make(env_name, render=False, figID=0, record=False, ros=False, directory='',
-                                        T_steps=None, num_targets=1, **kwargs):
+         t_steps=100, num_targets=1, **kwargs):
     """
     Parameters:
     ----------
@@ -28,7 +29,7 @@ def make(env_name, render=False, figID=0, record=False, ros=False, directory='',
     #         T_steps = 150
     #     else:
     #         T_steps = 100
-    T_steps = 100
+    # T_steps = 200
 
     local_view = 0
     if env_name == 'TargetTracking-v0':
@@ -53,8 +54,8 @@ def make(env_name, render=False, figID=0, record=False, ros=False, directory='',
         env0 = TargetTrackingInfoPlanner2(num_targets=num_targets, **kwargs)
     else:
         raise ValueError('No such environment exists.')
-
-    env = wrappers.TimeLimit(env0, max_episode_steps=T_steps)
+    # 使用gym中对episode进行timestep限制的wrapper进行封装，保证环境的更新
+    env = wrappers.TimeLimit(env0, max_episode_steps=t_steps)
     if ros:
         from ttenv.ros_wrapper import Ros
         env = Ros(env)
@@ -63,6 +64,6 @@ def make(env_name, render=False, figID=0, record=False, ros=False, directory='',
         env = Display2D(env, figID=figID, local_view=local_view)
     if record:
         from ttenv.display_wrapper import Video2D
-        env = Video2D(env, dirname = directory, local_view=local_view)
+        env = Video2D(env, dirname=directory, local_view=local_view)
 
     return env

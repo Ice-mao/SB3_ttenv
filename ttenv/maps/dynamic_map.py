@@ -14,7 +14,7 @@ class DynamicMap(GridMap):
         obj_lib_path : A path to a folder where all obstacle objects are stored.
             The folder must contain only obstacle objects in .npy files.
         """
-        map_config = yaml.load(open(os.path.join(map_dir_path, map_name+".yaml"), "r"))
+        map_config = yaml.load(open(os.path.join(map_dir_path+'/'+map_name+".yaml"), "r"), Loader=yaml.FullLoader)
         obj_lib_path = os.path.join(map_dir_path, map_config['lib_path'])
         self.mapdim = map_config['mapdim']
         self.mapres = np.array(map_config['mapres'])
@@ -62,7 +62,7 @@ class DynamicMap(GridMap):
 
 if __name__ == '__main__':
     print("Test DynamicMap")
-    d = DynamicMap(obj_lib_path='maps/lib_obstacles', map_path='maps/dynamic_map')
+    d = DynamicMap(map_name='lib_obstacles', map_dir_path='dynamic_map')
     for _ in range(5):
         d.generate_map()
         import matplotlib.pyplot as plt

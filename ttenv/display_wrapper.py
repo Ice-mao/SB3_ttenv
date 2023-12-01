@@ -1,4 +1,4 @@
-from gym import Wrapper
+from gymnasium import Wrapper
 import numpy as np
 from numpy import linalg as LA
 import os
@@ -44,6 +44,8 @@ class Display2D(Wrapper):
         for i in range(self.env_core.num_targets):
             self.traj_y[i][0].append(target_true_pos[i][0])
             self.traj_y[i][1].append(target_true_pos[i][1])
+        # 如果需要调试，可视化训练进度，则可以进行render
+        # self.render()
         return self.env.step(action)
 
     def render(self, record=False, batch_outputs=None):

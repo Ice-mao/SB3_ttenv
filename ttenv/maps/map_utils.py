@@ -21,7 +21,7 @@ def round(x):
 
 class GridMap(object):
     def __init__(self, map_path, margin2wall=0.5):
-        map_config = yaml.load(open(map_path+".yaml", "r"))
+        map_config = yaml.load(open(map_path+".yaml", "r"), Loader=yaml.CLoader)
         self.map = np.loadtxt(map_path+".cfg")
         if 'empty' in map_path:
             self.map = None
@@ -274,7 +274,7 @@ class GridMap(object):
                   [np.sin(odom[2] - np.pi/2), np.cos(odom[2] - np.pi/2)]])
         local_visit_maps = []
         local_mapmin_g = []
-        local_mapmin = [ # From left, right, front, back
+        local_mapmin = [  # From left, right, front, back
             np.array([-im_size/2*3*self.mapres[0], 0.0]),
             np.array([im_size/2*self.mapres[0], 0.0]),
             np.array([-im_size/2*self.mapres[0], im_size*self.mapres[1]]),

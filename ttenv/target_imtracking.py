@@ -9,7 +9,7 @@ TargetTrackingEnv5 : Local map & Local visit frequency maps of outside the front
     Therefore, the image input fed to the convolutional neural network has five depth.
     This intend to use a smaller image size.
 """
-from gym import spaces, logger
+from gymnasium import spaces, logger
 
 import numpy as np
 from numpy import linalg as LA
@@ -18,12 +18,12 @@ from ttenv.agent_models import *
 from ttenv.policies import *
 from ttenv.belief_tracker import KFbelief
 import ttenv.util as util
-from ttenv.target_tracking import TargetTrackingEnv1
+from ttenv.target_tracking import TargetTrackingEnv1, TargetTrackingEnv2
 
 class TargetTrackingEnv4(TargetTrackingEnv1):
     def __init__(self, num_targets=1, map_name='empty', is_training=True,
                                         known_noise=True, im_size=28, **kwargs):
-        self.im_size = im_size
+        self.im_size = im_size  # 图片尺寸设置为28*28
         TargetTrackingEnv1.__init__(self, num_targets=num_targets,
             map_name=map_name, is_training=is_training, known_noise=known_noise, **kwargs)
         self.id = 'TargetTracking-v4'
@@ -41,14 +41,15 @@ class TargetTrackingEnv4(TargetTrackingEnv1):
 
         # Get the local maps.
         map_state = self.map_state_func()
-        return np.concatenate((map_state, self.state))
+        return np.concatenate((map_state, self.state)), 0
 
     def step(self, action):
-        _, reward, done, info = super().step(action)
+        _, reward, done, _, info = super().step(action)
 
         # Get the local maps.
         map_state = self.map_state_func()
-        return np.concatenate((map_state, self.state)), reward, done, info
+        return np.concatenate((map_state, self.state)), reward, done, 0, info
+        # return [map_state, self.state], reward, done, 0, info
 
     def map_state_func(self):
         self.local_map, self.local_mapmin_g, _ = self.MAP.local_map(
@@ -95,3 +96,4 @@ class TargetTrackingEnv5(TargetTrackingEnv4):
         self.local_mapmin_g.extend(local_mapmin_gs)
 
         return np.array(self.local_map).T.flatten()
+        # return np.array(self.local_map)
